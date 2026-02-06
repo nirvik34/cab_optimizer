@@ -5,20 +5,6 @@ An AI-based fare optimization and route planning system that reduces ride cost b
 This project is implemented for VIT Chennai and nearby areas as a proof of concept.
 
 ⸻
-
-📌 Problem Statement
-
-In ride-hailing systems, drivers often take long detours to pick up users, which increases:
-	•	Driver travel distance
-	•	User waiting time
-	•	Final fare
-
-Goal:
-
-Reduce the ride fare by minimizing unnecessary driver detours before pickup, without changing the destination.
-
-⸻
-
 💡 Core Idea
 
 Instead of forcing the driver to come exactly to the user’s location:
@@ -81,21 +67,7 @@ ai_project/
 
 ⸻
 
-⚙️ Backend Logic (High Level)
-	1.	Receive user, driver, and destination coordinates
-	2.	For each pickup node:
-	•	Compute walking distance (user → node)
-	•	Compute driving distance (driver → node)
-	•	Compute post-pickup distance (node → destination)
-	3.	Discard nodes with excessive walking distance
-	4.	Calculate cost score:
 
-score = driver_to_pickup + pickup_to_destination + 0.3 × walking_distance
-
-	5.	Select node with minimum score
-	6.	Return routes and fare reduction info
-
-⸻
 
 🗺️ Visualization
 	•	🔴 Red dots → Available pickup nodes
@@ -117,15 +89,6 @@ Savings are displayed in the UI for transparency.
 
 ⸻
 
-🌍 Real-World Relevance
-
-Similar concepts are used in:
-	•	Uber Express Pool
-	•	Ola Meet & Greet
-	•	Public transport feeder systems
-	•	Campus shuttle optimization
-
-⸻
 
 🚀 How to Run
 
