@@ -7,6 +7,8 @@ export default function Sidebar({
   error,
   onOptimize,
   onReset,
+  onClose,
+  isMobile,
 }) {
   const totalKm = result ? (result.distance_meters / 1000).toFixed(1) : null
   const walkM = result ? result.user_walk_meters : null
@@ -17,27 +19,46 @@ export default function Sidebar({
     <aside
       className="flex flex-col no-scrollbar overflow-y-auto"
       style={{
-        width: '300px',
-        minWidth: '300px',
+        width: isMobile ? '100%' : '300px',
+        minWidth: isMobile ? undefined : '300px',
         height: '100vh',
         background: '#ffffff',
-        borderRight: '1px solid #e2e8f0',
+        borderRight: isMobile ? 'none' : '1px solid #e2e8f0',
       }}
     >
       {/* ── 1. HEADER ── */}
-      <div className="px-6 py-5" style={{ borderBottom: '1px solid #e2e8f0' }}>
-        <div
-          className="font-mono font-bold tracking-widest"
-          style={{ fontSize: '20px', color: '#22c55e' }}
-        >
-          SWIFTCAB
+      <div className="px-6 py-5 flex items-center justify-between" style={{ borderBottom: '1px solid #e2e8f0' }}>
+        <div>
+          <div
+            className="font-mono font-bold tracking-widest"
+            style={{ fontSize: '20px', color: '#22c55e' }}
+          >
+            SWIFTCAB
+          </div>
+          <div
+            className="font-mono uppercase tracking-widest mt-1"
+            style={{ fontSize: '12px', color: '#94a3b8' }}
+          >
+            TERMINAL OPS v1.0
+          </div>
         </div>
-        <div
-          className="font-mono uppercase tracking-widest mt-1"
-          style={{ fontSize: '12px', color: '#94a3b8' }}
-        >
-          TERMINAL OPS v1.0
-        </div>
+        {/* Close button — mobile only */}
+        {isMobile && (
+          <button
+            onClick={onClose}
+            className="cursor-pointer"
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: '4px',
+              color: '#64748b',
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>
+              close
+            </span>
+          </button>
+        )}
       </div>
 
       {/* ── 2. NAV ── */}
