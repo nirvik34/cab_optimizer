@@ -1,117 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>SwiftCab – Pickup Optimizer</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SwiftCab — Ride Optimizer</title>
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <style>
-    body { background:#0f172a; color:white; }
-    #map { height: 520px; }
-    .pickup-label { pointer-events:none; }
-  </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet" />
 </head>
-
-<body class="p-6">
-
-<h1 class="text-3xl font-bold text-center mb-2">
-  SwiftCab <span class="text-blue-400">Pickup Optimizer</span>
-</h1>
-
-<p class="text-center text-slate-400 mb-4">
-  Click map: USER → DRIVER → DESTINATION
-</p>
-
-<div class="flex justify-center gap-4 mb-4">
-  <button onclick="optimize()"
-    class="bg-blue-500 px-6 py-3 rounded-xl font-bold">Optimize</button>
-  <button onclick="resetMap()"
-    class="bg-red-500 px-6 py-3 rounded-xl font-bold">Reset</button>
-</div>
-
-<div id="info"
- class="hidden max-w-xl mx-auto p-4 bg-green-500/10 border border-green-500 rounded-xl text-center mb-4">
-</div>
-
-<div id="map" class="rounded-xl"></div>
-
-<script>
-const map = L.map("map").setView([12.8406,80.1534],15);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-
-let user=null, driver=null, dest=null;
-let layers=[];
-
-function resetMap(){
-  layers.forEach(l=>map.removeLayer(l));
-  layers=[];
-  user=driver=dest=null;
-  document.getElementById("info").classList.add("hidden");
-}
-
-map.on("click",e=>{
-  if(!user){
-    user=e.latlng;
-    layers.push(L.marker(user).addTo(map).bindPopup("👤 User").openPopup());
-  } else if(!driver){
-    driver=e.latlng;
-    layers.push(L.marker(driver).addTo(map).bindPopup("🚗 Driver").openPopup());
-  } else if(!dest){
-    dest=e.latlng;
-    layers.push(L.marker(dest).addTo(map).bindPopup("🎯 Destination").openPopup());
-  }
-});
-
-async function optimize(){
-  if(!user||!driver||!dest){
-    alert("Select USER, DRIVER, and DESTINATION");
-    return;
-  }
-
-  const res = await fetch("http://127.0.0.1:8000/book-ride",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({user,driver,destination:dest})
-  });
-
-  const data = await res.json();
-
-  data.pickup_nodes.forEach(n=>{
-    layers.push(
-      L.circleMarker([n.lat,n.lng],{radius:5,color:"red"}).addTo(map)
-    );
-    layers.push(
-      L.marker([n.lat,n.lng],{
-        icon:L.divIcon({
-          className:"pickup-label",
-          html:`<span class="text-xs text-red-400 font-bold">${n.name}</span>`
-        })
-      }).addTo(map)
-    );
-  });
-
-  layers.push(L.circleMarker(
-    [data.chosen_pickup.lat,data.chosen_pickup.lng],
-    {radius:9,color:"lime"}
-  ).addTo(map));
-
-  layers.push(L.polyline(data.user_route,{color:"lime",dashArray:"6"}).addTo(map));
-  layers.push(L.polyline(data.driver_route,{color:"dodgerblue",weight:5}).addTo(map));
-  layers.push(L.polyline(data.post_pickup_route,{color:"purple",weight:6}).addTo(map));
-
-  document.getElementById("info").innerHTML = `
-  📍 <b>Pickup Node:</b> ${data.chosen_pickup.name}<br><br>
-  🚶 User walks a short distance<br>
-  🚗 Driver stays aligned with destination<br>
-  🟣 Post-pickup route is shortest to destination<br><br>
-  💸 <b>Fare reduced</b> by avoiding driver detours
-  `;
-  document.getElementById("info").classList.remove("hidden");
-}
-</script>
-
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>

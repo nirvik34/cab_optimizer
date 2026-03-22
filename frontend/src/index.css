@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+/* ── Theme tokens ── */
+@theme {
+  --font-family-body: 'JetBrains Mono', monospace;
+  --font-family-label: 'JetBrains Mono', monospace;
+}
+
+/* ── Base ── */
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background: #f0fdf4;
+  color: #0f172a;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* ── Hide scrollbar ── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Leaflet overrides ── */
+.leaflet-default-icon-path { display: none; }
+.leaflet-container {
+  background: #f1f5f9 !important;
+  font-family: 'JetBrains Mono', monospace !important;
+}
+.leaflet-control-attribution {
+  display: none !important;
+}

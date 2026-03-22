@@ -1,20 +1,30 @@
-import requests
+import httpx
 
-def get_route(origin, destination, mode="car"):
-    profile = "foot" if mode == "foot" else "car"
+OSRM_BASE = "http://router.project-osrm.org/route/v1"
 
-    url = (
-        f"http://router.project-osrm.org/route/v1/{profile}/"
-        f"{origin['lng']},{origin['lat']};"
-        f"{destination['lng']},{destination['lat']}"
-        "?overview=full&geometries=geojson"
-    )
 
-    r = requests.get(url).json()
-    route = r["routes"][0]
+async def get_route(lat1, lng1, lat2, lng2, profile="car"):
+    """Fetch a route from OSRM. Returns (path, distance_meters)."""
+    url = f"{OSRM_BASE}/{profile}/{lng1},{lat1};{lng2},{lat2}"
+    params = {"overview": "full", "geometries": "geojson"}
 
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            resp = await client.get(url, params=params)
+            resp.raise_for_status()
+            data = resp.json()
+        except httpx.TimeoutException:
+            raise RuntimeError("OSRM request timed out — try again")
+        except httpx.HTTPStatusError as e:
+            raise RuntimeError(f"OSRM returned HTTP {e.response.status_code}")
+        except httpx.RequestError as e:
+            raise RuntimeError(f"OSRM connection failed: {e}")
+
+    if data.get("code") != "Ok":
+        raise RuntimeError(f"OSRM error: {data.get('code', 'unknown')}")
+
+    route = data["routes"][0]
     coords = route["geometry"]["coordinates"]
-    distance = route["distance"]
-
-    path = [[lat, lng] for lng, lat in coords]
+    path = [[c[1], c[0]] for c in coords]       # [lng,lat] → [lat,lng]
+    distance = route["legs"][0]["distance"]       # meters
     return path, distance

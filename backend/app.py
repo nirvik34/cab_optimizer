@@ -1,11 +1,11 @@
-from fastapi import FastAPI
+import asyncio
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from nodes import PICKUP_NODES
 from routing import get_route
-from nodes import pickup_nodes
 
-app = FastAPI()
-
+app = FastAPI(title="SwiftCab API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,48 +13,86 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+class Coord(BaseModel):
+    lat: float
+    lng: float
+
+
 class RideRequest(BaseModel):
-    user: dict
-    driver: dict
-    destination: dict
+    user: Coord
+    driver: Coord
+    destination: Coord
+
+
+@app.get("/nodes")
+def get_nodes():
+    return PICKUP_NODES
+
+
+async def _evaluate_node(node, req):
+    """Score a single pickup node. Returns (node, score, routes) or None."""
+    try:
+        walk_path, walk_dist = await get_route(
+            req.user.lat, req.user.lng,
+            node["lat"], node["lng"],
+            profile="foot",
+        )
+        # Reject if user has to walk > 600 meters
+        if walk_dist > 600:
+            return None
+
+        drive_path, drive_dist = await get_route(
+            req.driver.lat, req.driver.lng,
+            node["lat"], node["lng"],
+            profile="car",
+        )
+        post_path, post_dist = await get_route(
+            node["lat"], node["lng"],
+            req.destination.lat, req.destination.lng,
+            profile="car",
+        )
+
+        score = drive_dist + post_dist + 0.3 * walk_dist
+
+        return {
+            "node": node,
+            "score": score,
+            "walk": (walk_path, walk_dist),
+            "drive": (drive_path, drive_dist),
+            "post": (post_path, post_dist),
+        }
+    except Exception:
+        return None
+
 
 @app.post("/book-ride")
-def book_ride(req: RideRequest):
-    user = req.user
-    driver = req.driver
-    destination = req.destination
+async def book_ride(req: RideRequest):
+    # Evaluate all 9 nodes concurrently (cuts ~4s → ~1s)
+    results = await asyncio.gather(
+        *[_evaluate_node(node, req) for node in PICKUP_NODES]
+    )
 
-    best_node = None
-    best_score = float("inf")
+    # Filter out failed / rejected nodes
+    valid = [r for r in results if r is not None]
 
-    for node in pickup_nodes:
-        _, walk_dist = get_route(user, node, "foot")
-        _, drive_to_pickup = get_route(driver, node, "car")
-        _, pickup_to_dest = get_route(node, destination, "car")
+    if not valid:
+        raise HTTPException(
+            status_code=400,
+            detail="No valid pickup node found within 600m walking distance. "
+                   "Try placing User closer to VIT campus.",
+        )
 
-        if walk_dist > 600:
-            continue
-
-        score = drive_to_pickup + pickup_to_dest + 0.3 * walk_dist
-
-        if score < best_score:
-            best_score = score
-            best_node = node
-            best_walk = walk_dist
-
-    driver_route, _ = get_route(driver, best_node, "car")
-    user_route, _ = get_route(user, best_node, "foot")
-    post_pickup_route, _ = get_route(best_node, destination, "car")
+    # Pick the lowest-scoring node
+    best = min(valid, key=lambda r: r["score"])
 
     return {
-        "user": user,
-        "driver": driver,
-        "destination": destination,
-        "chosen_pickup": best_node,
-        "pickup_nodes": pickup_nodes,
-        "driver_route": driver_route,
-        "user_route": user_route,
-        "post_pickup_route": post_pickup_route,
-        "walk_distance_m": int(best_walk),
-        "discount_rupees": int(best_score * 0.02)
+        "chosen_pickup": best["node"],
+        "user_route": best["walk"][0],
+        "user_walk_meters": round(best["walk"][1]),
+        "driver_route": best["drive"][0],
+        "driver_dist_meters": round(best["drive"][1]),
+        "post_pickup_route": best["post"][0],
+        "post_pickup_meters": round(best["post"][1]),
+        "distance_meters": round(best["drive"][1] + best["post"][1]),
     }
